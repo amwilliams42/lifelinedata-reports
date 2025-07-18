@@ -27,7 +27,7 @@ jobs:
           EVIDENCE_SOURCE__postgres__port: 5437
           EVIDENCE_SOURCE__postgres__database: warehouse
           EVIDENCE_SOURCE__postgres__user: ${{ secrets.POSTGRES_USERNAME }}
-          EVIDENCE_SOURCE__postgres__password: ${{ secrets.POSTGRES_PASSWORD }}
+          EVIDENCE_SOURCE__postgres__password: "${{ secrets.POSTGRES_PASSWORD }}"
         run: |
           # Debug: Check environment variables (don't print passwords!)
           echo "Testing database connection..."
