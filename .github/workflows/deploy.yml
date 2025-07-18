@@ -38,7 +38,7 @@ jobs:
           echo "Password set: $([ -n "$EVIDENCE_SOURCE__postgres__password" ] && echo "Yes" || echo "No")"
           
           # Test basic connectivity
-          nc -zv localhost 5432 || echo "Cannot connect to localhost:5432"
+          nc -zv localhost 5437 || echo "Cannot connect to localhost:5437"
           
           # Test with psql if available
           if command -v psql >/dev/null 2>&1; then
