@@ -30,6 +30,7 @@ jobs:
         run: |
           # Ensure we can reach the database network
           docker network ls | grep warehouse || echo "Warning: warehouse network not found"
+          echo $EVIDENCE_SOURCE__warehouse__username
           
           # Build the project (this will connect to your local PostgreSQL)
           npm run sources
