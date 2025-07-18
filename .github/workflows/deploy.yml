@@ -25,7 +25,7 @@ jobs:
           EVIDENCE_SOURCE__warehouse__host: localhost
           EVIDENCE_SOURCE__warehouse__port: 5437
           EVIDENCE_SOURCE__warehouse__database: warehouse
-          EVIDENCE_SOURCE__warehouse__username: ${{ secrets.POSTGRES_USERNAME }}
+          EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
           EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           # Ensure we can reach the database network
