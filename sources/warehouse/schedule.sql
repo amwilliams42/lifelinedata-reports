@@ -1,0 +1,1 @@
+select * from staging_marts.mart_shift_assignments

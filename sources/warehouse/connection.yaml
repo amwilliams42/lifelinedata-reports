@@ -1,0 +1,10 @@
+# This file was automatically generated
+type: postgres
+name: warehouse
+options:
+  database: lifedata
+  host: localhost
+  port: 5437
+# Advanced Options, you probably don't want to change this
+buildOptions:
+  batchSize: 1000000

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  evidence-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: evidence-app
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.evidence.rule=Host(`${EVIDENCE_HOSTNAME}`)"
+      - "traefik.http.routers.evidence.service=evidence-app"
+      - "traefik.http.routers.evidence.entrypoints=websecure"
+      - "traefik.http.routers.evidence.tls.certresolver=letsencrypt"
+      - "traefik.http.services.evidence.loadbalancer.server.port=80"
+      - "traefik.docker.network=traefik"
+    networks:
+      - traefik
+      - warehouse
+
+networks:
+  traefik:
+    external: true
+  warehouse:
+    external: true
