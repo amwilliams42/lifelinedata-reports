@@ -27,42 +27,8 @@ jobs:
           EVIDENCE_SOURCE__warehouse__port: 5437
           EVIDENCE_SOURCE__warehouse__database: warehouse
           EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
-          POSTGRES_PASSWORD_RAW: ${{ secrets.POSTGRES_PASSWORD }}
+          EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          # Debug: Check environment variables (don't print passwords!)
-          export EVIDENCE_SOURCE__warehouse__password="$POSTGRES_PASSWORD_RAW"
-          echo "Testing database connection..."
-          echo "Host: $EVIDENCE_SOURCE__postgres__host"
-          echo "Port: $EVIDENCE_SOURCE__postgres__port"
-          echo "Database: $EVIDENCE_SOURCE__postgres__database"
-          echo "Username: $EVIDENCE_SOURCE__postgres__user"
-          echo "pass: $EVIDENCE_SOURCE__postgres__password"
-          echo "Password set: $([ -n "$EVIDENCE_SOURCE__postgres__password" ] && echo "Yes" || echo "No")"
-          
-          # Test basic connectivity
-          nc -zv localhost 5437 || echo "Cannot connect to localhost:5437"
-          
-          # Test with psql if available
-          if command -v psql >/dev/null 2>&1; then
-            echo "Testing PostgreSQL connection with psql..."
-            PGPASSWORD="$EVIDENCE_SOURCE__postgres__password" psql \
-              -h "$EVIDENCE_SOURCE__postgres__host" \
-              -p "$EVIDENCE_SOURCE__postgres__port" \
-              -U "$EVIDENCE_SOURCE__postgres__user" \
-              -d "$EVIDENCE_SOURCE__postgres__database" \
-              -c "SELECT 1 as test;" || echo "psql connection failed"
-          else
-            echo "psql not available, testing with docker..."
-            echo "$EVIDENCE_SOURCE__postgres__password" | docker run --rm -i postgres:15 psql \
-              -h host.docker.internal \
-              -p "$EVIDENCE_SOURCE__postgres__port" \
-              -U "$EVIDENCE_SOURCE__postgres__user" \
-              -d "$EVIDENCE_SOURCE__postgres__database" \
-              -c "SELECT 1 as test;" || echo "Docker psql connection failed"
-          fi
-          
-          # Ensure we can reach the database network
-          docker network ls | grep warehouse || echo "Warning: warehouse network not found"
           
           # Build the project (this will connect to your local PostgreSQL)
           npm run sources
