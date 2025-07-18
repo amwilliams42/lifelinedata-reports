@@ -20,6 +20,15 @@ jobs:
       - name: Install dependencies
         run: npm install
         
+      - name: Build Evidence sources
+        env:
+          EVIDENCE_SOURCE__warehouse__host: localhost
+          EVIDENCE_SOURCE__warehouse__port: 5437
+          EVIDENCE_SOURCE__warehouse__database: warehouse
+          EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
+          EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
+        run: npm run sources
+
       - name: Build Evidence project
         env:
           EVIDENCE_SOURCE__warehouse__host: localhost
@@ -27,14 +36,7 @@ jobs:
           EVIDENCE_SOURCE__warehouse__database: warehouse
           EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
           EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
-        run: |
-          # Ensure we can reach the database network
-          docker network ls | grep warehouse || echo "Warning: warehouse network not found"
-          echo $EVIDENCE_SOURCE__warehouse__username
-          
-          # Build the project (this will connect to your local PostgreSQL)
-          npm run sources
-          npm run build:strict
+        run: npm run build:strict
           
       - name: Backup current build
         run: |
