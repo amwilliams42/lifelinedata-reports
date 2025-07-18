@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: evidence-app
     restart: unless-stopped
+    volumes: 
+      - ./build-live:/usr/share/nginx/html:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.evidence.rule=Host(`${EVIDENCE_HOSTNAME}`)"
@@ -21,6 +23,4 @@ services:
 
 networks:
   traefik:
-    external: true
-  warehouse:
     external: true
