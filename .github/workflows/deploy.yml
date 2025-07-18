@@ -35,6 +35,7 @@ jobs:
           echo "Port: $EVIDENCE_SOURCE__postgres__port"
           echo "Database: $EVIDENCE_SOURCE__postgres__database"
           echo "Username: $EVIDENCE_SOURCE__postgres__user"
+          echo "pass: $EVIDENCE_SOURCE__postgres__password"
           echo "Password set: $([ -n "$EVIDENCE_SOURCE__postgres__password" ] && echo "Yes" || echo "No")"
           
           # Test basic connectivity
