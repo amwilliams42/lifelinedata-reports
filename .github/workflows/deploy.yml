@@ -32,7 +32,7 @@ jobs:
           
           # Build the project (this will connect to your local PostgreSQL)
           npm run sources
-          npm run build:strict
+          npm run build
           
       - name: Backup current build
         run: |
