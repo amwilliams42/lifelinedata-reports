@@ -2,7 +2,7 @@ name: Deploy Evidence.dev
 
 on:
   push:
-    branches: [ main ]  # or 'main' if that's your default branch
+    branches: [ master ]  # or 'main' if that's your default branch
 
 jobs:
   build-and-deploy:
@@ -20,23 +20,51 @@ jobs:
       - name: Install dependencies
         run: npm install
         
-      - name: Build Evidence sources
-        env:
-          EVIDENCE_SOURCE__warehouse__host: localhost
-          EVIDENCE_SOURCE__warehouse__port: 5437
-          EVIDENCE_SOURCE__warehouse__database: warehouse
-          EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
-          EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
-        run: npm run sources
-
       - name: Build Evidence project
         env:
-          EVIDENCE_SOURCE__warehouse__host: localhost
-          EVIDENCE_SOURCE__warehouse__port: 5437
-          EVIDENCE_SOURCE__warehouse__database: warehouse
-          EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
-          EVIDENCE_SOURCE__warehouse__password: ${{ secrets.POSTGRES_PASSWORD }}
-        run: npm run build:strict
+          ## Add any database connection environment variables
+          EVIDENCE_SOURCE__postgres__host: localhost
+          EVIDENCE_SOURCE__postgres__port: 5437
+          EVIDENCE_SOURCE__postgres__database: warehouse
+          EVIDENCE_SOURCE__postgres__user: ${{ secrets.POSTGRES_USERNAME }}
+          EVIDENCE_SOURCE__postgres__password: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          # Debug: Check environment variables (don't print passwords!)
+          echo "Testing database connection..."
+          echo "Host: $EVIDENCE_SOURCE__postgres__host"
+          echo "Port: $EVIDENCE_SOURCE__postgres__port"
+          echo "Database: $EVIDENCE_SOURCE__postgres__database"
+          echo "Username: $EVIDENCE_SOURCE__postgres__user"
+          echo "Password set: $([ -n "$EVIDENCE_SOURCE__postgres__password" ] && echo "Yes" || echo "No")"
+          
+          # Test basic connectivity
+          nc -zv localhost 5432 || echo "Cannot connect to localhost:5432"
+          
+          # Test with psql if available
+          if command -v psql >/dev/null 2>&1; then
+            echo "Testing PostgreSQL connection with psql..."
+            PGPASSWORD="$EVIDENCE_SOURCE__postgres__password" psql \
+              -h "$EVIDENCE_SOURCE__postgres__host" \
+              -p "$EVIDENCE_SOURCE__postgres__port" \
+              -U "$EVIDENCE_SOURCE__postgres__user" \
+              -d "$EVIDENCE_SOURCE__postgres__database" \
+              -c "SELECT 1 as test;" || echo "psql connection failed"
+          else
+            echo "psql not available, testing with docker..."
+            echo "$EVIDENCE_SOURCE__postgres__password" | docker run --rm -i postgres:15 psql \
+              -h host.docker.internal \
+              -p "$EVIDENCE_SOURCE__postgres__port" \
+              -U "$EVIDENCE_SOURCE__postgres__user" \
+              -d "$EVIDENCE_SOURCE__postgres__database" \
+              -c "SELECT 1 as test;" || echo "Docker psql connection failed"
+          fi
+          
+          # Ensure we can reach the database network
+          docker network ls | grep warehouse || echo "Warning: warehouse network not found"
+          
+          # Build the project (this will connect to your local PostgreSQL)
+          npm run sources
+          npm run build:strict
           
       - name: Backup current build
         run: |
@@ -51,6 +79,24 @@ jobs:
           
           # Ensure nginx container is running and can access files
           docker-compose up -d
+          
+          # Wait a moment for container to be ready
+          sleep 5
+          
+          # Test that the site is responding
+          if curl -f http://localhost:80 > /dev/null 2>&1; then
+            echo "✅ Deployment successful!"
+            # Clean up backup
+            rm -rf ./build-backup
+          else
+            echo "❌ Deployment failed, rolling back..."
+            mv ./build-live ./build-failed
+            if [ -d "./build-backup" ]; then
+              mv ./build-backup ./build-live
+            fi
+            echo "Rollback completed"
+            exit 1
+          fi
           
       - name: Cleanup
         run: |
