@@ -23,13 +23,14 @@ jobs:
       - name: Build Evidence project
         env:
           ## Add any database connection environment variables
-          EVIDENCE_SOURCE__postgres__host: localhost
-          EVIDENCE_SOURCE__postgres__port: 5437
-          EVIDENCE_SOURCE__postgres__database: warehouse
-          EVIDENCE_SOURCE__postgres__user: ${{ secrets.POSTGRES_USERNAME }}
-          EVIDENCE_SOURCE__postgres__password: "${{ secrets.POSTGRES_PASSWORD }}"
+          EVIDENCE_SOURCE__warehouse__host: localhost
+          EVIDENCE_SOURCE__warehouse__port: 5437
+          EVIDENCE_SOURCE__warehouse__database: warehouse
+          EVIDENCE_SOURCE__warehouse__user: ${{ secrets.POSTGRES_USERNAME }}
+          POSTGRES_PASSWORD_RAW: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           # Debug: Check environment variables (don't print passwords!)
+          export EVIDENCE_SOURCE__warehouse__password="$POSTGRES_PASSWORD_RAW"
           echo "Testing database connection..."
           echo "Host: $EVIDENCE_SOURCE__postgres__host"
           echo "Port: $EVIDENCE_SOURCE__postgres__port"
