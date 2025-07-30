@@ -1,1 +1,1 @@
-select * from staging_marts.mart_shift_assignments
+select * from analytics.shift_assignments

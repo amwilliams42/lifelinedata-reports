@@ -57,4 +57,3 @@ where date_line between (select period_start from ${payperiods} where period_num
 AND warehouse.schedule.source_databases = 'tn'
 ```
 
-
