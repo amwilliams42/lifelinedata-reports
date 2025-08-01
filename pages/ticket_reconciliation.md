@@ -35,10 +35,9 @@ SELECT
     dob,
     finalized,
     finalized_date,
-    crew_name as finalized_by,
     status_name as qa_status,
     reviewer_name,
-    qa_date,
+    case when reviewer_name is null then null else strftime(qa_date, '%Y-%m-%d') end as qa_date_str,
     exported
 FROM warehouse.qa_runlist 
 WHERE run_num IS NOT NULL AND ${inputs.selected_dimensions} 
@@ -65,11 +64,10 @@ AND date_of_service BETWEEN '${inputs.date_filter.start}' AND '${inputs.date_fil
     <Column id=calltype title="Call Type"/>
     <Column id=patient_name title="Patient Name"/>
     <Column id=dob title="Date of Birth"/>
-    <Column id=finalized title="Run Locked?"/>
+    <Column id=finalized title="Locked?"/>
     <Column id=finalized_date/>
-    <Column id=finalized_by title="Crew Member"/>
     <Column id=qa_status title="QA Status"/>
     <Column id=reviewer_name/>
-    <Column id=qa_date title="QA Date"/>
+    <Column id=qa_date_str title="QA Date"/>
     <Column id=exported title="Export Status"/>
 </DataTable>
