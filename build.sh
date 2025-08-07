@@ -1,83 +1,38 @@
-#!/bin/sh
-# build.sh - Place this file in your Evidence git repository root
-
+#!/bin/bash
 set -e
 
 echo "Starting Evidence build process..."
 
-# Copy source from git-sync volume to working directory
-echo "Copying source code..."
-cp -r /source/current/. /app/
-cd /app
+# Navigate to the source directory
+cd /source/current
 
-# Generate timestamp for this build
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BUILD_DIR="/builds/build-$TIMESTAMP"
+# Install dependencies if needed
+if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules/.package-lock.json" ]; then
+    echo "Installing dependencies..."
+    npm ci --production=false
+fi
 
-echo "Building into: $BUILD_DIR"
+echo "Building Evidence project..."
+npm run build
 
-# Install dependencies
-echo "Installing dependencies..."
-npm install
+# Use atomic move to prevent serving partial updates
+echo "Copying build output..."
+BUILD_TIMESTAMP=$(date +%s)
+TEMP_DIR="/builds/temp-$BUILD_TIMESTAMP"
 
-# Run Evidence build commands
-echo "Running npm run sources..."
-npm run sources
+# Copy to temporary directory first
+cp -r build/* "$TEMP_DIR/"
 
-echo "Running npm run build:strict with custom outDir..."
-npm run build:strict -- --outDir="$BUILD_DIR"
+# Atomic move - this ensures nginx doesn't serve partial updates
+echo "Deploying new build..."
+rm -rf /builds/current-old 2>/dev/null || true
+mv /builds/current /builds/current-old 2>/dev/null || true
+mv "$TEMP_DIR" /builds/current
 
-# Create/update the current symlink (atomic operation)
-echo "Updating symlink..."
-cd /builds
-ln -sfn "build-$TIMESTAMP" current
+# Clean up old build
+rm -rf /builds/current-old 2>/dev/null || true
 
-# Clean up old builds (keep last 3)
-echo "Cleaning up old builds..."
-ls -t | grep "^build-" | tail -n +4 | xargs rm -rf 2>/dev/null || true
+# Signal nginx to reload (optional)
+# docker exec nginx-reports nginx -s reload 2>/dev/null || true
 
-echo "Build completed successfully!"
-echo "Build directory: $BUILD_DIR"
-echo "Active build: /builds/current -> build-$TIMESTAMP"#!/bin/sh
-# build.sh - Place this inside the evidence-builder container
-
-set -e
-
-echo "Starting Evidence build process..."
-
-# Copy source from git-sync volume
-echo "Copying source code..."
-cp -r /source/current/. /app/
-
-# Generate timestamp for this build
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BUILD_DIR="/builds/build-$TIMESTAMP"
-
-echo "Building into: $BUILD_DIR"
-
-# Create build directory
-mkdir -p "$BUILD_DIR"
-
-# Install dependencies
-echo "Installing dependencies..."
-npm install
-
-# Run Evidence build commands
-echo "Running npm run sources..."
-npm run sources
-
-echo "Running npm run build:strict with custom outDir..."
-npm run build:strict -- --outDir="$BUILD_DIR"
-
-# Create/update the current symlink (atomic operation)
-echo "Updating symlink..."
-cd /builds
-ln -sfn "build-$TIMESTAMP" current
-
-# Clean up old builds (keep last 3)
-echo "Cleaning up old builds..."
-ls -t | grep "^build-" | tail -n +4 | xargs rm -rf 2>/dev/null || true
-
-echo "Build completed successfully!"
-echo "Build directory: $BUILD_DIR"
-echo "Active build: /builds/current -> build-$TIMESTAMP"
+echo "Build completed successfully at $(date)"
