@@ -21,6 +21,7 @@ BUILD_TIMESTAMP=$(date +%s)
 TEMP_DIR="/builds/temp-$BUILD_TIMESTAMP"
 
 # Copy to temporary directory first
+mkdir -p "$TEMP_DIR"
 cp -r build/* "$TEMP_DIR/"
 
 # Atomic move - this ensures nginx doesn't serve partial updates
