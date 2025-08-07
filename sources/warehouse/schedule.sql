@@ -1,0 +1,1 @@
+select * from analytics.shift_assignments
