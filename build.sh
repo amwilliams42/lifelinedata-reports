@@ -13,7 +13,9 @@ if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules/.package-lock.j
 fi
 
 echo "Building Evidence project..."
-npm run build
+npm run sources
+
+npm run build:strict
 
 # Use atomic move to prevent serving partial updates
 echo "Copying build output..."
