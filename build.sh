@@ -20,18 +20,24 @@ echo "Copying build output..."
 BUILD_TIMESTAMP=$(date +%s)
 TEMP_DIR="/builds/temp-$BUILD_TIMESTAMP"
 
-# Copy to temporary directory first
+# Create temporary directory and copy files
 mkdir -p "$TEMP_DIR"
 cp -r build/* "$TEMP_DIR/"
 
 # Atomic move - this ensures nginx doesn't serve partial updates
 echo "Deploying new build..."
-rm -rf /builds/current-old 2>/dev/null || true
-mv /builds/current /builds/current-old 2>/dev/null || true
-mv "$TEMP_DIR" /builds/current
+rm -rf /builds/old 2>/dev/null || true
+# Move existing files to backup
+if [ -d "/builds" ] && [ "$(ls -A /builds 2>/dev/null)" ]; then
+    mkdir -p /builds-backup
+    mv /builds/* /builds-backup/ 2>/dev/null || true
+fi
+# Move new files directly to /builds
+mv "$TEMP_DIR"/* /builds/
+rmdir "$TEMP_DIR"
 
-# Clean up old build
-rm -rf /builds/current-old 2>/dev/null || true
+# Clean up backup
+rm -rf /builds-backup 2>/dev/null || true
 
 # Signal nginx to reload (optional)
 # docker exec nginx-reports nginx -s reload 2>/dev/null || true
