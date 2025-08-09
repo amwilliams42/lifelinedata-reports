@@ -13,7 +13,8 @@ if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules/.package-lock.j
 fi
 
 echo "Building Evidence project..."
-npm run build
+npm run sources
+npm run build:strict
 
 echo "Checking build output..."
 ls -la build/
