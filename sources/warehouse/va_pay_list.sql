@@ -1,0 +1,1 @@
+select * from analytics.va_pay_list
