@@ -2,6 +2,160 @@
   title: Memphis/Mississippi
 ---
 
+
+
+```sql weekly_totals
+WITH base AS (
+  SELECT
+    calltype_name,
+    CASE market WHEN 'Memphis' THEN 'MEM' WHEN 'Mississippi' THEN 'MS' END AS market_abbrev,
+    date_of_service,
+    run_outcome
+  FROM warehouse.tn_runs
+  WHERE market IN ('Memphis', 'Mississippi')
+    AND calltype_name IN ('ALS', 'BLS', 'CCT', 'Flight Crew')
+    AND date_of_service >= DATE '2025-08-24'
+    AND date_of_service <  DATE '2025-08-31'
+)
+SELECT
+  calltype_name,
+  market,
+  Sunday,
+  Monday,
+  Tuesday,
+  Wednesday,
+  Thursday,
+  Friday,
+  Saturday,
+  Total
+FROM (
+SELECT
+  t.*,
+  CASE calltype_name
+    WHEN 'ALS' THEN 1
+    WHEN 'BLS' THEN 2
+    WHEN 'CCT' THEN 3
+    WHEN 'Total Ran' THEN 4
+    WHEN 'Cancelled' THEN 5
+    WHEN 'Turned' THEN 6
+    ELSE 7
+  END AS sort_calltype,
+  CASE market WHEN 'MEM' THEN 1 WHEN 'MS' THEN 2 ELSE 3 END AS sort_market
+FROM (
+-- Detail: ran by calltype and market
+SELECT
+  calltype_name,
+  market_abbrev AS market,
+  SUM((EXTRACT(DOW FROM date_of_service) = 0)::int) AS Sunday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 1)::int) AS Monday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 2)::int) AS Tuesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 3)::int) AS Wednesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 4)::int) AS Thursday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 5)::int) AS Friday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 6)::int) AS Saturday,
+  COUNT(*) AS Total
+FROM base
+WHERE run_outcome = 'ran'
+GROUP BY calltype_name, market_abbrev
+
+UNION ALL
+-- Total Ran by market (across call types)
+SELECT
+  'Total Ran' AS calltype_name,
+  market_abbrev AS market,
+  SUM((EXTRACT(DOW FROM date_of_service) = 0)::int) AS Sunday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 1)::int) AS Monday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 2)::int) AS Tuesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 3)::int) AS Wednesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 4)::int) AS Thursday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 5)::int) AS Friday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 6)::int) AS Saturday,
+  COUNT(*) AS Total
+FROM base
+WHERE run_outcome = 'ran'
+GROUP BY market_abbrev
+
+UNION ALL
+-- Cancelled by market (across call types)
+SELECT
+  'Cancelled' AS calltype_name,
+  market_abbrev AS market,
+  SUM((EXTRACT(DOW FROM date_of_service) = 0)::int) AS Sunday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 1)::int) AS Monday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 2)::int) AS Tuesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 3)::int) AS Wednesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 4)::int) AS Thursday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 5)::int) AS Friday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 6)::int) AS Saturday,
+  COUNT(*) AS Total
+FROM base
+WHERE run_outcome = 'cancelled'
+GROUP BY market_abbrev
+
+UNION ALL
+-- Turned by market (across call types)
+SELECT
+  'Turned' AS calltype_name,
+  market_abbrev AS market,
+  SUM((EXTRACT(DOW FROM date_of_service) = 0)::int) AS Sunday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 1)::int) AS Monday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 2)::int) AS Tuesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 3)::int) AS Wednesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 4)::int) AS Thursday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 5)::int) AS Friday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 6)::int) AS Saturday,
+  COUNT(*) AS Total
+FROM base
+WHERE run_outcome = 'turned'
+GROUP BY market_abbrev
+) AS t
+) AS s
+ORDER BY
+  sort_calltype,
+  sort_market
+
+```
+
+```sql weekly_demand_totals
+WITH base AS (
+  SELECT date_of_service, run_outcome
+  FROM warehouse.tn_runs
+  WHERE date_of_service >= DATE '2025-08-24'
+    AND date_of_service <  DATE '2025-08-31'
+)
+SELECT
+  SUM((EXTRACT(DOW FROM date_of_service) = 0)::int) AS Sunday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 1)::int) AS Monday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 2)::int) AS Tuesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 3)::int) AS Wednesday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 4)::int) AS Thursday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 5)::int) AS Friday,
+  SUM((EXTRACT(DOW FROM date_of_service) = 6)::int) AS Saturday,
+  COUNT(*) AS Total
+FROM base
+WHERE run_outcome IN ('ran', 'turned');
+
+```
+
+
+
+<DataTable data={weekly_totals} groupBy=calltype_name totalRow=true groupType=section>
+  <Column id=calltype_name title='Call Type' totalAgg=''/>
+  <Column id=market totalAgg='Total Demand'/>
+  <Column id=Sunday title='Sun' align=center totalAgg={weekly_demand_totals[0].Sunday}/>
+  <Column id=Monday title='Mon' align=center totalAgg={weekly_demand_totals[0].Monday}/>
+  <Column id=Tuesday title='Tue' align=center totalAgg={weekly_demand_totals[0].Tuesday}/>
+  <Column id=Wednesday title='Wed' align=center totalAgg={weekly_demand_totals[0].Wednesday}/>
+  <Column id=Thursday title='Thu' align=center totalAgg={weekly_demand_totals[0].Thursday}/>
+  <Column id=Friday title='Fri' align=center totalAgg={weekly_demand_totals[0].Friday}/>
+  <Column id=Saturday title='Sat' align=center totalAgg={weekly_demand_totals[0].Saturday}/>
+  <Column id=Total title='Total' align=center totalAgg={weekly_demand_totals[0].Total}/>
+</DataTable>
+
+
+
+
+
 ```sql top5s
 WITH base AS (
   SELECT
@@ -75,6 +229,9 @@ select distinct run_group from ${top5s}
     </Group>
   {/each}
 </Grid>
+
+
+
 
 ```sql week_dates
 
