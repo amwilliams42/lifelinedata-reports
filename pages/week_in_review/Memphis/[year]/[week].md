@@ -19,15 +19,6 @@ select
 ```
 
 
-```sql test
-  SELECT
-    SUM(CASE WHEN r.run_outcome = 'ran'    THEN 1 ELSE 0 END) AS ran_calls,
-    SUM(CASE WHEN r.run_outcome = 'turned' THEN 1 ELSE 0 END) AS turned_calls
-  FROM warehouse.tn_runs r
-  WHERE r.date_of_service BETWEEN DATE '${start_and_end_dates[0].start}' AND DATE '${start_and_end_dates[0].end_plus_one}'
-
-```
-
 
 
 ```sql glance
@@ -36,30 +27,31 @@ WITH curr AS (
     SUM(CASE WHEN r.run_outcome = 'ran'    THEN 1 ELSE 0 END) AS ran_calls,
     SUM(CASE WHEN r.run_outcome = 'turned' THEN 1 ELSE 0 END) AS turned_calls
   FROM warehouse.tn_runs r
-  WHERE r.date_of_service BETWEEN DATE '${start_and_end_dates[0].start}' AND DATE '${start_and_end_dates[0].end_plus_one}'
+  WHERE r.market IN ('Memphis', 'Mississippi')
+    AND calltype_name IN ('ALS', 'BLS', 'CCT', 'Flight Crew')
+    AND date_of_service >= '${start_and_end_dates[0].start}'
+    AND date_of_service <  '${start_and_end_dates[0].end_plus_one}'
 ),
 prev AS (
   SELECT
     SUM(CASE WHEN r.run_outcome = 'ran'    THEN 1 ELSE 0 END) AS ran_calls,
     SUM(CASE WHEN r.run_outcome = 'turned' THEN 1 ELSE 0 END) AS turned_calls
   FROM warehouse.tn_runs r
-  WHERE r.date_of_service BETWEEN (DATE '${start_and_end_dates[0].start}' - INTERVAL 7 DAY) AND (DATE '${start_and_end_dates[0].end_plus_one}' - INTERVAL 7 DAY)
+  WHERE r.date_of_service BETWEEN ('${start_and_end_dates[0].start}'::DATE - INTERVAL 7 DAY) 
+                               AND ('${start_and_end_dates[0].end_plus_one}'::DATE - INTERVAL 7 DAY)
 )
 SELECT
   -- Big Values (current window)
-  CAST(c.ran_calls AS INTEGER)                                                                AS ran_calls,
-  CAST(c.turned_calls AS INTEGER)                                                             AS turned_calls,
-  CAST(c.ran_calls + c.turned_calls AS INTEGER)                                               AS total_demand,
-  CAST(c.ran_calls AS DOUBLE) / NULLIF(CAST(c.ran_calls + c.turned_calls AS DOUBLE), 0)       AS capture_rate,
-
-  -- Week-over-week comparisons (current vs prior window)
-  (CAST(c.ran_calls AS DOUBLE)    - CAST(p.ran_calls AS DOUBLE))    / NULLIF(CAST(p.ran_calls AS DOUBLE), 0)        AS ran_calls_growth,
-  (CAST(c.turned_calls AS DOUBLE) - CAST(p.turned_calls AS DOUBLE)) / NULLIF(CAST(p.turned_calls AS DOUBLE), 0)     AS turned_calls_growth,
-  (CAST(c.ran_calls + c.turned_calls AS DOUBLE)
-   - CAST(p.ran_calls + p.turned_calls AS DOUBLE))
-   / NULLIF(CAST(p.ran_calls + p.turned_calls AS DOUBLE), 0)                                                           AS total_demand_growth,
-  (CAST(c.ran_calls AS DOUBLE) / NULLIF(CAST(c.ran_calls + c.turned_calls AS DOUBLE), 0))
-  - (CAST(p.ran_calls AS DOUBLE) / NULLIF(CAST(p.ran_calls + p.turned_calls AS DOUBLE), 0))                            AS capture_rate_change,
+  c.ran_calls::INTEGER                                                                    AS ran_calls,
+  c.turned_calls::INTEGER                                                                 AS turned_calls,
+  (c.ran_calls + c.turned_calls)::INTEGER                                                 AS total_demand,
+  c.ran_calls::DOUBLE / NULLIF((c.ran_calls + c.turned_calls)::DOUBLE, 0)               AS capture_rate,
+  (c.ran_calls::DOUBLE - p.ran_calls::DOUBLE) / NULLIF(p.ran_calls::DOUBLE, 0)          AS ran_calls_growth,
+  (c.turned_calls::DOUBLE - p.turned_calls::DOUBLE) / NULLIF(p.turned_calls::DOUBLE, 0) AS turned_calls_growth,
+  ((c.ran_calls + c.turned_calls)::DOUBLE - (p.ran_calls + p.turned_calls)::DOUBLE) 
+    / NULLIF((p.ran_calls + p.turned_calls)::DOUBLE, 0)                                  AS total_demand_growth,
+  (c.ran_calls::DOUBLE / NULLIF((c.ran_calls + c.turned_calls)::DOUBLE, 0))
+  - (p.ran_calls::DOUBLE / NULLIF((p.ran_calls + p.turned_calls)::DOUBLE, 0))           AS capture_rate_change
 FROM curr c
 CROSS JOIN prev p
 ```
@@ -276,7 +268,8 @@ WITH base AS (
     ROW_NUMBER() OVER (PARTITION BY r.pickup_facility ORDER BY r.leg_id) AS dedup_total
   FROM warehouse.tn_runs r
   WHERE r.calltype_name IN ('ALS', 'BLS', 'CCT')
-  and r.date_of_service between '${start_and_end_dates[0].start}' and '${start_and_end_dates[0].end_plus_one}'
+  and date_of_service >= DATE '${start_and_end_dates[0].start}'
+    AND date_of_service <  DATE '${start_and_end_dates[0].end_plus_one}'
   and (r.market = 'Memphis' or r.market = 'Mississippi')
 ),
 per_type AS (
@@ -395,19 +388,16 @@ cross join call_types ct
 left join warehouse.tn_runs r 
   on r.calltype_name = ct.calltype_name
   and r.source_id = s.source_id
-  and r.date_of_service between '${start_and_end_dates[0].start}' and '${start_and_end_dates[0].end_plus_one}'
+  and date_of_service >= DATE '${start_and_end_dates[0].start}'
+    AND date_of_service <  DATE '${start_and_end_dates[0].end_plus_one}'
   and r.run_outcome = 'ran'
 GROUP BY s.source_id, r.source_name, ct.calltype_name
 ORDER BY s.source_id, ct.calltype_name
 ```
 
 ```sql sources_of_interest
-
 select * from
-
 (values (1, 'Methodist IOC'), (13, 'Memphis VA - Vetride Only'), (30, 'St. Jude'), (21, 'Baptist Priority Ambulance')) as t(id, name)
-
-
 ```
 ## Calltype by Selected Source by Day
 <Grid cols=2>
@@ -466,7 +456,6 @@ ORDER BY
   END,
   xsort
 ```
-
 
 <Heatmap 
     data={ran_heatmap}
