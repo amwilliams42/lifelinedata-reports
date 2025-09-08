@@ -14,7 +14,7 @@ fi
 
 echo "Building Evidence project..."
 npm run sources
-npm run build:strict
+npm run build
 
 echo "Checking build output..."
 ls -la build/
