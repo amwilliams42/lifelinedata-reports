@@ -1,6 +1,7 @@
----
-  title: Memphis/Mississippi
----
+
+
+## Memphis/Mississippi - Week {params.week}: {title_str[0].str}
+
 
 ```sql start_and_end_dates
 select 
@@ -15,7 +16,21 @@ select
     strftime(
     date_trunc('week', make_date(2025, 1, 1) + interval '7' day * (${params.week} - 1)) + interval '6' days,
     '%Y-%m-%d'
-  ) as end_plus_one
+  ) as end_plus_one,
+    strftime(
+    date_trunc('week', make_date(2025, 1, 1) + interval '7' day * (${params.week} - 1)) - interval '1' day,
+    '%Y-%m-%d'
+  )::DATE as start_date,
+  strftime(
+    date_trunc('week', make_date(2025, 1, 1) + interval '7' day * (${params.week} - 1)) - interval '1' day + interval '6' days,
+    '%Y-%m-%d'
+  )::DATE as end_date
+```
+
+```sql title_str
+SELECT
+  strftime(start_date, '%m/%d/%Y') || ' through ' || strftime(end_date, '%m/%d/%Y') AS str
+FROM ${start_and_end_dates}
 ```
 
 
