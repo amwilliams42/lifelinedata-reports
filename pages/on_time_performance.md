@@ -204,7 +204,8 @@ ORDER BY pickup_facility DESC
 />
 
 ```sql late_calls_detail
-SELECT 
+SELECT
+  CAST(run_number::INTEGER AS TEXT) as run_number,
   service_date,
   pickup_facility,
   dropoff_facility,
@@ -251,6 +252,7 @@ ORDER BY value DESC
     rows=15
     emptyMessage="No late calls for selected facilities"
 >
+  <Column id=run_number title="Run Number"/>
   <Column id=service_date_formatted title="Date"/>
   <Column id=calltype_name title="Call Type"/>
   <Column id=pickup_delay_minutes title="Minutes Late" fmt=num1/>
