@@ -132,5 +132,163 @@ ORDER BY service_date
 />
 </Grid>
 
+```sql opt_table
+SELECT 
+  late_status,
+  SUM(number_of_trips) as number_of_trips,
+  ROUND(SUM(number_of_trips) * 100.0 / SUM(SUM(number_of_trips)) OVER(), 2) as percent
+FROM (
+  SELECT 
+    CASE 
+      WHEN delay_bucket = 0 THEN 'On Time'
+      WHEN delay_bucket >= 12 THEN 'Over 60 Minutes Late'
+      ELSE (delay_bucket * 5) || ' to ' || ((delay_bucket + 1) * 5 - 1) || ' Minutes Late'
+    END as late_status,
+    COUNT(*) as number_of_trips
+  FROM (
+    SELECT 
+      GREATEST(0, FLOOR(GREATEST(0, pickup_delay_minutes) / 5)) as delay_bucket
+    FROM ${otp_filtered} 
+    WHERE pickup_delay_minutes IS NOT NULL
+  )
+  GROUP BY delay_bucket
+)
+GROUP BY late_status
+ORDER BY 
+  CASE 
+    WHEN late_status = 'On Time' THEN 0
+    WHEN late_status = 'Over 60 Minutes Late' THEN 999
+    ELSE CAST(SPLIT_PART(late_status, ' ', 1) AS INTEGER)
+  END
+```
+
+```sql otp_histo
+SELECT 
+  pickup_delay_minutes
+FROM ${otp_filtered} 
+WHERE pickup_delay_minutes IS NOT NULL 
+  AND pickup_delay_minutes >= -30  -- Remove extreme outliers
+  AND pickup_delay_minutes <= 120  
+```
+<Grid cols=2>
+  <Histogram
+    data={otp_histo}
+    x=pickup_delay_minutes
+    title="Distribution of Pickup Delays"
+    subtitle="Frequency of delays across all calls (5 weeks)"
+    xAxisTitle="Minutes Late/Early"
+    yAxisTitle="Number of Calls"
+    color="#2563eb"
+    showDownload=true
+/>
 
 
+<DataTable data={opt_table} rows=all/>
+</Grid>
+
+```sql dist_facs
+SELECT DISTINCT 
+  pickup_facility
+FROM ${otp_filtered} 
+WHERE pickup_facility IS NOT NULL
+ORDER BY pickup_facility DESC
+```
+## Late Call Details for Selected Facilities
+
+<Dropdown
+    name=facility_filter
+    data={dist_facs}
+    value=pickup_facility
+    multiple=true
+    title="Select Facilities"
+/>
+
+```sql late_calls_detail
+SELECT 
+  service_date,
+  pickup_facility,
+  dropoff_facility,
+  calltype_name,
+  market,
+  pickup_delay_minutes,
+  CASE 
+    WHEN pickup_delay_minutes <= 5 THEN 'On Time'
+    WHEN pickup_delay_minutes <= 15 THEN '6-15 Min Late'
+    WHEN pickup_delay_minutes <= 30 THEN '16-30 Min Late'
+    WHEN pickup_delay_minutes <= 60 THEN '31-60 Min Late'
+    ELSE 'Over 60 Min Late'
+  END as delay_category,
+  emergency,
+  strftime(service_date, '%Y-%m-%d') as service_date_formatted
+FROM ${otp_filtered} 
+WHERE pickup_facility IN ${inputs.facility_filter.value}
+  AND pickup_delay_minutes > 0  -- Only late calls
+  AND pickup_delay_minutes IS NOT NULL
+ORDER BY pickup_delay_minutes DESC
+```
+
+```sql facility_delay_breakdown
+SELECT 
+  CASE 
+    WHEN pickup_delay_minutes <= 5 THEN '1-5 Min Late (On Time)'
+    WHEN pickup_delay_minutes <= 15 THEN '6-15 Min Late'
+    WHEN pickup_delay_minutes <= 30 THEN '16-30 Min Late'
+    WHEN pickup_delay_minutes <= 60 THEN '31-60 Min Late'
+    ELSE 'Over 60 Min Late'
+  END as name,
+  COUNT(*) as value
+FROM ${otp_filtered} 
+WHERE pickup_facility IN ${inputs.facility_filter.value}
+  AND pickup_delay_minutes > 0
+  AND pickup_delay_minutes IS NOT NULL
+GROUP BY 1
+ORDER BY value DESC
+```
+
+<Grid cols=2>
+<DataTable 
+    data={late_calls_detail}
+    rows=15
+    emptyMessage="No late calls for selected facilities"
+>
+  <Column id=service_date_formatted title="Date"/>
+  <Column id=calltype_name title="Call Type"/>
+  <Column id=pickup_delay_minutes title="Minutes Late" fmt=num1/>
+  <Column id=pickup_facility title="Pickup Facility"/>
+  <Column id=dropoff_facility title="Dropoff Facility"/>
+</DataTable>
+  <ECharts config={
+    {
+        title: {
+            text: 'Late Call Percentage Breakdown',
+            left: 'center'
+        },
+        tooltip: {
+            formatter: '{b}: {c} calls ({d}%)'
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left'
+        },
+        series: [
+        {
+          type: 'pie',
+          radius: '50%',
+          data: [...facility_delay_breakdown],
+          label: {
+            show: true,
+            formatter: '{b}\n{d}%'
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          }
+        }
+      ]
+      }
+    }
+/>
+</Grid>

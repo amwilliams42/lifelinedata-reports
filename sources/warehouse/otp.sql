@@ -55,10 +55,15 @@ WITH base AS (
 
     t.pickup_hour,
     t.pickup_day_of_week,
-    t.pickup_week_of_year
+    t.pickup_week_of_year,
+
+    l.pickup_facility,
+    l.dropoff_facility
   FROM staging.stg_runs r
   JOIN staging.stg_run_timestamps t
     ON t.leg_id = r.leg_id
+  JOIN staging.stg_run_locations l
+    ON l.leg_id = r.leg_id
   WHERE t.pickup_time >= (current_date - interval '5 weeks') and t.pickup_time < current_date
   and r.trip_status = 4
   and calltype_name in ('ALS', 'BLS', 'CCT')
@@ -124,5 +129,9 @@ SELECT
   -- Bucketing helpers
   pickup_hour,
   pickup_day_of_week,
-  pickup_week_of_year
+  pickup_week_of_year,
+
+  -- Facilities
+  pickup_facility,
+  dropoff_facility
 FROM base;
