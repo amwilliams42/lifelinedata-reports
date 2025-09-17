@@ -19,7 +19,7 @@ WITH base AS (
     r.modified_timestamp,
 
     t.service_date,
-    t.pickup_time,
+    t.pickup_time,                -- scheduled time we are late after
     t.orig_pickup_time,
     t.requested_pickup_time,
     t.appointment_time,
@@ -32,7 +32,7 @@ WITH base AS (
     t.assigned_time,
     t.acknowledged_time,
     t.enroute_time,
-    t.at_scene_time,
+    t.at_scene_time,              -- actual arrival time
     t.transporting_time,
     t.at_destination_time,
     t.clear_time,
@@ -56,7 +56,6 @@ WITH base AS (
     t.pickup_hour,
     t.pickup_day_of_week,
     t.pickup_week_of_year,
-
     l.pickup_facility,
     l.dropoff_facility
   FROM staging.stg_runs r
@@ -64,9 +63,17 @@ WITH base AS (
     ON t.leg_id = r.leg_id
   JOIN staging.stg_run_locations l
     ON l.leg_id = r.leg_id
-  WHERE t.pickup_time >= (current_date - interval '5 weeks') and t.pickup_time < current_date
-  and r.trip_status = 4
-  and calltype_name in ('ALS', 'BLS', 'CCT')
+  WHERE t.pickup_time >= (current_date - interval '5 weeks')
+    AND t.pickup_time < now()               -- exclude future trips based on scheduled time
+    AND r.trip_status = 4
+    AND r.calltype_name IN ('ALS', 'BLS', 'CCT')
+),
+detail AS (
+  SELECT
+    b.*,
+    -- lateness = crew arrival minus scheduled pickup; negative means early
+    EXTRACT(EPOCH FROM (b.at_scene_time - b.pickup_time)) / 60.0 AS pickup_delay_minutes_raw
+  FROM base b
 )
 SELECT
   -- Identifiers
@@ -86,52 +93,42 @@ SELECT
   trip_status,
 
   -- Time fields
-  pickup_time,
+  pickup_time,                -- scheduled time
   requested_pickup_time,
   appointment_time,
   orig_pickup_time,
-
-  -- Derived schedule and windows
-  COALESCE(requested_pickup_time, appointment_time, orig_pickup_time) AS scheduled_pickup_time,
+  at_scene_time,              -- actual arrival
   date_trunc('week', pickup_time)::date AS pickup_week_start,
 
-  -- Timeliness metrics
+  -- Timeliness metrics: truncate negative to 0 (early arrivals are 0 late)
   CASE
-    WHEN pickup_time IS NOT NULL
-         AND COALESCE(requested_pickup_time, appointment_time, orig_pickup_time) IS NOT NULL
-    THEN EXTRACT(EPOCH FROM (at_scene_time - COALESCE(pickup_time, appointment_time, orig_pickup_time))) / 60.0
+    WHEN at_scene_time IS NOT NULL AND pickup_time IS NOT NULL
+      THEN GREATEST(pickup_delay_minutes_raw, 0)
     ELSE NULL
   END AS pickup_delay_minutes,
 
-  -- On-time flags
+  -- OTP flags derived from truncated delay
   CASE
-    WHEN pickup_time IS NOT NULL
-         AND COALESCE(requested_pickup_time, appointment_time, orig_pickup_time) IS NOT NULL
-         AND pickup_time <= COALESCE(requested_pickup_time, appointment_time, orig_pickup_time)
-    THEN TRUE
-    ELSE FALSE
+    WHEN at_scene_time IS NOT NULL AND pickup_time IS NOT NULL
+      THEN (GREATEST(pickup_delay_minutes_raw, 0) = 0)
+    ELSE NULL
   END AS on_time_pickup_strict,
 
   CASE
-    WHEN pickup_time IS NOT NULL
-         AND COALESCE(requested_pickup_time, appointment_time, orig_pickup_time) IS NOT NULL
-         AND pickup_time <= COALESCE(requested_pickup_time, appointment_time, orig_pickup_time) + interval '5 minutes'
-    THEN TRUE
-    ELSE FALSE
+    WHEN at_scene_time IS NOT NULL AND pickup_time IS NOT NULL
+      THEN (GREATEST(pickup_delay_minutes_raw, 0) <= 5)
+    ELSE NULL
   END AS on_time_pickup_5min_grace,
 
-  -- Status timestamps (optional for drilldowns)
+  -- Operational timestamps (for drilldowns)
   assigned_time,
   acknowledged_time,
   enroute_time,
-  at_scene_time,
 
   -- Bucketing helpers
   pickup_hour,
   pickup_day_of_week,
   pickup_week_of_year,
-
-  -- Facilities
   pickup_facility,
   dropoff_facility
-FROM base;
+FROM detail;
