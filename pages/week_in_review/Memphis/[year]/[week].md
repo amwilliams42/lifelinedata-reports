@@ -52,8 +52,8 @@ prev AS (
     SUM(CASE WHEN r.run_outcome = 'ran'    THEN 1 ELSE 0 END) AS ran_calls,
     SUM(CASE WHEN r.run_outcome = 'turned' THEN 1 ELSE 0 END) AS turned_calls
   FROM warehouse.tn_runs r
-  WHERE r.date_of_service BETWEEN ('${start_and_end_dates[0].start}'::DATE - INTERVAL 7 DAY) 
-                               AND ('${start_and_end_dates[0].end_plus_one}'::DATE - INTERVAL 7 DAY)
+  WHERE r.date_of_service >= ('${start_and_end_dates[0].start}'::DATE - INTERVAL 7 DAY) 
+                               AND r.date_of_service < ('${start_and_end_dates[0].end_plus_one}'::DATE - INTERVAL 7 DAY)
 )
 SELECT
   -- Big Values (current window)
