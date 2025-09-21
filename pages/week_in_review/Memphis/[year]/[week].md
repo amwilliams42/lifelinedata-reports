@@ -102,8 +102,6 @@ CROSS JOIN prev p
   comparisonTitle="WoW"
 />
 
-
-
 ```sql weekly_totals
 WITH base AS (
   SELECT
@@ -347,9 +345,6 @@ select distinct run_group from ${top5s}
   {/each}
 </Grid>
 
-
-
-
 ```sql week_dates
 
 -- Extract the start date from your date range and calculate each day of the week
@@ -434,9 +429,7 @@ select * from
 </Group>
 
 {/each}
-
 </Grid>
-
 
 ```sql ran_heatmap
 SELECT
@@ -454,7 +447,8 @@ END AS ysort
     -- numeric sort key for x-axis (0000..2300 -> 0..2300)
 FROM warehouse.tn_runs AS r
 WHERE
-  r.date_of_service BETWEEN '${start_and_end_dates[0].start}' AND '${start_and_end_dates[0].end_plus_one}'
+  r.date_of_service >= DATE '${start_and_end_dates[0].start}'
+    AND r.date_of_service <  DATE '${start_and_end_dates[0].end_plus_one}'
 GROUP BY
   r.hour_of_day,
   r.day_of_week
