@@ -281,6 +281,7 @@ WITH base AS (
     ROW_NUMBER() OVER (PARTITION BY r.pickup_facility ORDER BY r.leg_id) AS dedup_total
   FROM warehouse.tn_runs r
   WHERE r.calltype_name IN ('ALS', 'BLS', 'CCT')
+  and r.trip_status > 0
   and date_of_service >= DATE '${start_and_end_dates[0].start}'
     AND date_of_service <  DATE '${start_and_end_dates[0].end_plus_one}'
   and (r.market = 'Memphis' or r.market = 'Mississippi')
