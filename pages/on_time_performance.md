@@ -1,7 +1,13 @@
 ---
 title: On Time Performance - Last 5 Weeks
 ---
-<LastRefreshed/>
+
+<Note>
+  On time performance over the past 5 weeks. A call is considered "on time" if the crew arrives on scene within 15 minutes of the scheduled pickup time.
+  
+</Note>
+
+
 
 
 ## Select a Market
@@ -19,31 +25,31 @@ where otp.source_database = '${inputs.hardcoded_options}'
 ```
 
 ```sql card_data
-SELECT 
+SELECT
   -- 1. Overall On-Time Performance
-  ROUND(AVG(CASE WHEN on_time_pickup_5min_grace THEN 1 ELSE 0.0 END), 3) as otp_percentage,
-  
+  ROUND(AVG(CASE WHEN on_time_pickup_15min_grace THEN 1 ELSE 0.0 END), 3) as otp_percentage,
+
   -- 2. Total Call Volume
   COUNT(*) as total_calls,
-  
+
   -- 3. Average Pickup Delay
   ROUND(AVG(ABS(pickup_delay_minutes)), 1) as avg_delay_minutes,
-  
+
   -- 4. Emergency Call OTP
-  ROUND(AVG(CASE WHEN emergency = true AND on_time_pickup_5min_grace THEN 1.0 
-               WHEN emergency = true THEN 0.0 
+  ROUND(AVG(CASE WHEN emergency = true AND on_time_pickup_15min_grace THEN 1.0
+               WHEN emergency = true THEN 0.0
                ELSE NULL END), 1) as emergency_otp,
-  
+
   -- 5. Last 7 Days Moving Average OTP
-  ROUND(AVG(CASE WHEN service_date >= CURRENT_DATE - 7 AND on_time_pickup_5min_grace THEN 1.0 
-               WHEN service_date >= CURRENT_DATE - 7 THEN 0.0 
+  ROUND(AVG(CASE WHEN service_date >= CURRENT_DATE - 7 AND on_time_pickup_15min_grace THEN 1.0
+               WHEN service_date >= CURRENT_DATE - 7 THEN 0.0
                ELSE NULL END), 3) as last_7_days_otp,
   ROUND(
-    AVG(CASE WHEN service_date >= CURRENT_DATE - 7 AND on_time_pickup_5min_grace THEN 1.0 
-             WHEN service_date >= CURRENT_DATE - 7 THEN 0.0 
+    AVG(CASE WHEN service_date >= CURRENT_DATE - 7 AND on_time_pickup_15min_grace THEN 1.0
+             WHEN service_date >= CURRENT_DATE - 7 THEN 0.0
              ELSE NULL END) -
-    AVG(CASE WHEN service_date >= CURRENT_DATE - 14 AND service_date < CURRENT_DATE - 7 AND on_time_pickup_5min_grace THEN 1.0 
-             WHEN service_date >= CURRENT_DATE - 14 AND service_date < CURRENT_DATE - 7 THEN 0.0 
+    AVG(CASE WHEN service_date >= CURRENT_DATE - 14 AND service_date < CURRENT_DATE - 7 AND on_time_pickup_15min_grace THEN 1.0
+             WHEN service_date >= CURRENT_DATE - 14 AND service_date < CURRENT_DATE - 7 THEN 0.0
              ELSE NULL END), 3
   ) as otp_change_7_day
 FROM ${otp_filtered}
@@ -83,11 +89,10 @@ FROM ${otp_filtered}
   />
   </Group>
 
-
 ```sql trend_line
-SELECT 
+SELECT
   service_date,
-  ROUND(AVG(CASE WHEN on_time_pickup_5min_grace THEN 100.0 ELSE 0.0 END), 1) as daily_otp,
+  ROUND(AVG(CASE WHEN on_time_pickup_15min_grace THEN 100.0 ELSE 0.0 END), 1) as daily_otp,
   COUNT(*) as daily_volume
 FROM ${otp_filtered}
 WHERE service_date >= CURRENT_DATE - 90
@@ -97,13 +102,13 @@ ORDER BY service_date DESC
 
 
 ```sql volume_vs_performance
-SELECT 
+SELECT
   service_date,
   COUNT(*) as daily_volume,
-  ROUND(AVG(CASE WHEN on_time_pickup_5min_grace THEN 1.0 ELSE 0.0 END), 3) as daily_otp,
+  ROUND(AVG(CASE WHEN on_time_pickup_15min_grace THEN 1.0 ELSE 0.0 END), 3) as daily_otp,
   strftime(service_date, '%Y-%m-%d') as service_date_formatted
 FROM ${otp_filtered}
-WHERE service_date >= CURRENT_DATE - 35 
+WHERE service_date >= CURRENT_DATE - 35
 GROUP BY service_date
 ORDER BY service_date
 ```
@@ -214,16 +219,15 @@ SELECT
   calltype_name,
   market,
   pickup_delay_minutes,
-  CASE 
-    WHEN pickup_delay_minutes <= 5 THEN 'On Time'
-    WHEN pickup_delay_minutes <= 15 THEN '6-15 Min Late'
+  CASE
+    WHEN pickup_delay_minutes <= 15 THEN 'On Time'
     WHEN pickup_delay_minutes <= 30 THEN '16-30 Min Late'
     WHEN pickup_delay_minutes <= 60 THEN '31-60 Min Late'
     ELSE 'Over 60 Min Late'
   END as delay_category,
   emergency,
   strftime(service_date, '%Y-%m-%d') as service_date_formatted
-FROM ${otp_filtered} 
+FROM ${otp_filtered}
 WHERE pickup_facility IN ${inputs.facility_filter.value}
   AND pickup_delay_minutes > 0  -- Only late calls
   AND pickup_delay_minutes IS NOT NULL
@@ -231,16 +235,15 @@ ORDER BY pickup_delay_minutes DESC
 ```
 
 ```sql facility_delay_breakdown
-SELECT 
-  CASE 
-    WHEN pickup_delay_minutes <= 5 THEN '1-5 Min Late (On Time)'
-    WHEN pickup_delay_minutes <= 15 THEN '6-15 Min Late'
+SELECT
+  CASE
+    WHEN pickup_delay_minutes <= 15 THEN '1-15 Min Late (On Time)'
     WHEN pickup_delay_minutes <= 30 THEN '16-30 Min Late'
     WHEN pickup_delay_minutes <= 60 THEN '31-60 Min Late'
     ELSE 'Over 60 Min Late'
   END as name,
   COUNT(*) as value
-FROM ${otp_filtered} 
+FROM ${otp_filtered}
 WHERE pickup_facility IN ${inputs.facility_filter.value}
   AND pickup_delay_minutes > 0
   AND pickup_delay_minutes IS NOT NULL

@@ -116,9 +116,9 @@ SELECT
 
   CASE
     WHEN at_scene_time IS NOT NULL AND pickup_time IS NOT NULL
-      THEN (GREATEST(pickup_delay_minutes_raw, 0) <= 5)
+      THEN (GREATEST(pickup_delay_minutes_raw, 0) <= 15)
     ELSE NULL
-  END AS on_time_pickup_5min_grace,
+  END AS on_time_pickup_15min_grace,
 
   -- Operational timestamps (for drilldowns)
   assigned_time,
