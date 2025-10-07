@@ -11,7 +11,13 @@ title: On Time Performance - Last 5 Weeks
 ```sql otp_filtered
 SELECT *
 FROM warehouse.otp
-where otp.source_database = '${inputs.hardcoded_options}'
+WHERE
+  CASE
+    WHEN '${inputs.hardcoded_options}' IN ('il', 'mi') THEN source_database = '${inputs.hardcoded_options}'
+    WHEN '${inputs.hardcoded_options}' = 'memphis_ms' THEN source_database = 'tn' AND market IN ('Memphis', 'Mississippi')
+    WHEN '${inputs.hardcoded_options}' = 'nashville' THEN source_database = 'tn' AND market = 'Nashville'
+    ELSE FALSE
+  END
 ```
 ```sql daily_otp
 SELECT ROUND(AVG(CASE WHEN on_time_pickup_15min_grace THEN 1 ELSE 0.0 END), 3) as otp_percentage
@@ -23,7 +29,8 @@ WHERE strftime(service_date, '%Y-%m-%d') = '${inputs.daily_date.value}'
 <ButtonGroup name=hardcoded_options>
     <ButtonGroupItem valueLabel="Illinois" value="il" default=true/>
     <ButtonGroupItem valueLabel="Michigan" value="mi" />
-    <ButtonGroupItem valueLabel="Tennessee" value="tn" />
+    <ButtonGroupItem valueLabel="Memphis/MS" value="memphis_ms" />
+    <ButtonGroupItem valueLabel="Nashville" value="nashville" />
 </ButtonGroup>
 
 
