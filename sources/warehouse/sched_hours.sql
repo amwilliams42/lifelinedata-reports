@@ -1,1 +1,1 @@
-select * from analytics.sched_hours
+select * from analytics.sched_hours;

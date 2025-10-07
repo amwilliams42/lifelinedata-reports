@@ -8,21 +8,40 @@ title: On Time Performance - Last 5 Weeks
 </Note>
 
 
-
-
+```sql otp_filtered
+SELECT *
+FROM warehouse.otp
+where otp.source_database = '${inputs.hardcoded_options}'
+```
+```sql daily_otp
+SELECT ROUND(AVG(CASE WHEN on_time_pickup_15min_grace THEN 1 ELSE 0.0 END), 3) as otp_percentage
+FROM ${otp_filtered}
+WHERE strftime(service_date, '%Y-%m-%d') = '${inputs.daily_date.value}'
+```
 ## Select a Market
-
+<Group>
 <ButtonGroup name=hardcoded_options>
     <ButtonGroupItem valueLabel="Illinois" value="il" default=true/>
     <ButtonGroupItem valueLabel="Michigan" value="mi" />
     <ButtonGroupItem valueLabel="Tennessee" value="tn" />
 </ButtonGroup>
 
-```sql otp_filtered
-SELECT *
-FROM warehouse.otp
-where otp.source_database = '${inputs.hardcoded_options}'
-```
+
+
+<DateInput
+    name=daily_date
+    title="Select Date"
+/>
+
+<BigValue
+  data={daily_otp}
+  value=otp_percentage
+  title="Daily On-Time Performance"
+  fmt=pct1
+/></Group>
+
+
+
 
 ```sql card_data
 SELECT
