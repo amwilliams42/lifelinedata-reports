@@ -61,8 +61,10 @@ WITH base AS (
   FROM staging.stg_runs r
   JOIN staging.stg_run_timestamps t
     ON t.leg_id = r.leg_id
+    AND t.source_database = r.source_database
   JOIN staging.stg_run_locations l
     ON l.leg_id = r.leg_id
+    AND l.source_database = r.source_database
   WHERE t.pickup_time >= (current_date - interval '5 weeks')
     AND t.pickup_time < now()               -- exclude future trips based on scheduled time
     AND r.trip_status = 4
