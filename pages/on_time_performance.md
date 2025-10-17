@@ -7,6 +7,22 @@ title: On Time Performance - Last 5 Weeks
   
 </Note>
 
+```sql dates
+SELECT 
+    DATE '2025-01-01' AS start_date,
+    CURRENT_DATE - INTERVAL '1 day' AS end_date;
+
+```
+```sql date_series
+SELECT 
+    CURRENT_DATE - INTERVAL (i || ' days') AS date
+FROM 
+    range(0, CAST((CURRENT_DATE - DATE '2024-12-31') AS INTEGER)) AS t(i)
+ORDER BY 
+    date DESC;
+```
+
+
 
 ```sql otp_filtered
 SELECT *
@@ -35,15 +51,18 @@ WHERE strftime(service_date, '%Y-%m-%d') = '${inputs.daily_date.value}'
 
 
 
+
 <DateInput
     name=daily_date
     title="Select Date"
+    data={date_series}
+    dates=date
 />
 
 <BigValue
   data={daily_otp}
   value=otp_percentage
-  title="Daily On-Time Performance"
+  title="Daily OTP"
   fmt=pct1
 /></Group>
 
@@ -94,20 +113,20 @@ FROM ${otp_filtered}
   <BigValue
     data={card_data}
     value=avg_delay_minutes
-    title="Average Pickup Delay (Minutes)"
+    title="Average P/U Delay"
     fmt=num1
   />
 
   <BigValue
     data={card_data}
     value=emergency_otp
-    title="Emergency Call On-Time Performance"
+    title="Emergency Call OTP"
     fmt=pct1
   />
   <BigValue
     data={card_data}
     value=last_7_days_otp
-    title="Last 7 Days On-Time Performance"
+    title="Last 7 Days OTP"
     fmt=pct1
     comparison=otp_change_7_day
     comparisonFmt=pct1
