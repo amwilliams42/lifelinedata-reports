@@ -42,11 +42,11 @@ select * from plswork where sdate = '${inputs.daily_date.value}'
 
 ## Selected Day: {inputs.daily_date.value}
 
-<Grid cols=6>
+<Grid cols=4>
     <BigValue
         data={tot_this_day}
         value=total_time_on_task_hours
-        title="Time on Task Hours"
+        title="ToT Hours"
         fmt="0.1"
     />
     <BigValue
@@ -55,6 +55,14 @@ select * from plswork where sdate = '${inputs.daily_date.value}'
         title="Total Unit Hours"
         fmt="0.1"
     />
+    <BigValue
+        data={tot_this_day}
+        value=time_on_task_pct
+        title='ToT%'
+        fmt=pct
+    />
+    
+    
     <BigValue
         data={tot_this_day}
         value=avg_scene_time_minutes
