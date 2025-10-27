@@ -1,0 +1,17 @@
+name: Build Reports
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs at the top of every hour
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - name: Build Evidence reports
+        working-directory: /home/alex/reports
+        run: |
+          docker compose exec -T evidence-builder chmod +x /source/current/build.sh
+          docker compose exec -T evidence-builder /source/current/build.sh

@@ -47,13 +47,11 @@ select * from plswork where sdate = '${inputs.daily_date.value}'
         data={tot_this_day}
         value=total_time_on_task_hours
         title="ToT Hours"
-        fmt="0.1"
     />
     <BigValue
         data={tot_this_day}
         value=total_scheduled_hours
         title="Total Unit Hours"
-        fmt="0.1"
     />
     <BigValue
         data={tot_this_day}
@@ -67,25 +65,21 @@ select * from plswork where sdate = '${inputs.daily_date.value}'
         data={tot_this_day}
         value=avg_scene_time_minutes
         title="Avg Scene Time"
-        fmt="0.1"
     />
     <BigValue
         data={tot_this_day}
         value=avg_destination_time_minutes
         title="Avg Dest Time"
-        fmt="0.1"
     />
     <BigValue
         data={tot_this_day}
         value=total_runs
         title="Total Runs"
-        fmt="#,##0"
     />
     <BigValue
         data={tot_this_day}
         value=uhu
         title="UHU"
-        fmt="0.2"
     />
 </Grid>
 
@@ -158,25 +152,20 @@ where region = '${inputs.tot_region}'
         data={key_metrics}
         value=avg_tot
         title="Avg Time on Task"
-        fmt="0.1"
     />
     <BigValue
         data={key_metrics}
         value=avg_scene
         title="Avg Scene Time"
-        fmt="0.1"
     />
     <BigValue
         data={key_metrics}
         value=avg_destination
-        title="Avg Destination Time"
-        fmt="0.1"
-    />
+        title="Avg Destination Time"    />
     <BigValue
         data={key_metrics}
         value=avg_uhu
         title="Avg UHU"
-        fmt="0.2"
     />
 </Grid>
 
