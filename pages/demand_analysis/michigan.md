@@ -1,11 +1,11 @@
-# Memphis Demand Analysis
+# Michigan Demand Analysis
 
 ## 5-Week Average Demand Patterns
 
 The following heatmaps show average demand patterns across hours of the day and days of the week, based on a rolling 5-week average.
 
 ```sql heatmaps
-select * from warehouse."5wk_demand_mem"
+select * from warehouse."5wk_demand_mi"
 ```
 ### Total Demand (5-Week Average)
 
